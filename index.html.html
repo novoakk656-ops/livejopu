@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Мои билеты · Яндекс Go</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #0f0f0f;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 40px;
+        }
+
+        /* Верхняя панель */
+        .top-nav {
+            padding: 12px 16px 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 22px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .nav-title {
+            text-align: center;
+            flex: 1;
+        }
+
+        .nav-title h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+        }
+
+        .nav-title p {
+            font-size: 12px;
+            color: #8e8e93;
+            margin-top: 2px;
+            font-weight: 400;
+        }
+
+        /* Основной контент */
+        .content {
+            padding: 0 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .ticket-card {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Синий верх билета */
+        .ticket-top {
+            background-color: #1c3d5a;
+            border-radius: 16px 16px 0 0;
+            padding: 40px 20px;
+            text-align: center;
+            position: relative;
+            border-bottom: 4px dashed #0f0f0f;
+            transition: background-color 0.3s;
+        }
+
+        /* Если билет активен (таймер идет), делаем синий цвет более ярким */
+        .ticket-top.active {
+            background-color: #174d85;
+        }
+
+        .ticket-top::before,
+        .ticket-top::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            width: 24px;
+            height: 24px;
+            background-color: #0f0f0f;
+            border-radius: 50%;
+        }
+
+        .ticket-top::before { left: -12px; }
+        .ticket-top::after { right: -12px; }
+
+        .ticket-top h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #8e8e93;
+            letter-spacing: -0.5px;
+            transition: color 0.3s;
+            outline: none;
+            border-bottom: 1px dashed transparent;
+        }
+
+        .ticket-top.active h2 {
+            color: #ffffff;
+        }
+
+        /* Наведение для редактирования */
+        .editable:hover {
+            border-bottom-color: #ffdb4d;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        /* Тёмная нижняя часть */
+        .ticket-bottom {
+            background-color: #1c1c1e;
+            border-radius: 0 0 16px 16px;
+            padding: 40px 20px 36px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .ticket-bottom::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background-image: radial-gradient(circle, #0f0f0f 4px, transparent 4px);
+            background-size: 16px 16px;
+            background-position: center top;
+            background-repeat: repeat-x;
+        }
+
+        .expired-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #8e8e93;
+            margin-bottom: 20px;
+            text-align: center;
+            transition: color 0.3s;
+            outline: none;
+        }
+
+        .expired-text.active {
+            color: #ffffff;
+        }
+
+        /* Таймер */
+        .timer {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .timer-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .timer-box {
+            background-color: #2c2c2e;
+            border-radius: 8px;
+            width: 38px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #8e8e93;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 1px;
+            transition: color 0.3s;
+        }
+
+        .timer-box.active {
+            color: #ffffff;
+        }
+
+        .timer-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: #636366;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .timer-sep {
+            font-size: 24px;
+            font-weight: 600;
+            color: #636366;
+            line-height: 48px;
+        }
+
+        /* Секция "Детали" */
+        .details-section {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 32px;
+        }
+
+        .details-section h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            letter-spacing: -0.3px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 0;
+            border-bottom: 1px solid #2c2c2e;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 16px;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8e8e93;
+            flex-shrink: 0;
+        }
+
+        .detail-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .detail-text {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .detail-label {
+            font-size: 13px;
+            color: #8e8e93;
+            font-weight: 400;
+        }
+
+        .detail-value {
+            font-size: 17px;
+            color: #ffffff;
+            font-weight: 500;
+            letter-spacing: -0.2px;
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            padding-bottom: 2px;
+        }
+
+        /* Кнопка сброса таймера (скрытая, появляется при клике на таймер) */
+        .reset-btn {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #8e8e93;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: none;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+
+        /* Анимация пульсации, когда время истекает */
+        @keyframes pulse-red {
+            0% { color: #ffffff; }
+            50% { color: #ff4757; }
+            100% { color: #ffffff; }
+        }
+
+        .timer-box.ending {
+            animation: pulse-red 1s infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="top-nav">
+        <button class="nav-btn" aria-label="Назад">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <div class="nav-title">
+            <h1>Мои билеты</h1>
+            <p>Указано местное время</p>
+        </div>
+        <button class="nav-btn" aria-label="Обновить" onclick="resetTimer()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 4v6h-6M1 20v-6h6"/>
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+        </button>
+    </header>
+
+    <main class="content">
+        <div class="ticket-card">
+            <div class="ticket-top" id="ticketTop">
+                <h2 contenteditable="true" class="editable" spellcheck="false" title="Нажмите, чтобы изменить">Троллейбус 3</h2>
+            </div>
+            <div class="ticket-bottom">
+                <div class="expired-text" id="expiredText">Срок действия истекает</div>
+                <div class="timer" id="timerContainer">
+                    <div class="timer-block">
+                        <div class="timer-box" id="minBox">59</div>
+                        <div class="timer-label">мин</div>
+                    </div>
+                    <div class="timer-sep">:</div>
+                    <div class="timer-block">
+                        <div class="timer-box" id="secBox">59</div>
+                        <div class="timer-label">сек</div>
+                    </div>
+                    <div class="timer-sep">:</div>
+                    <div class="timer-block">
+                        <div class="timer-box" id="msBox">59</div>
+                        <div class="timer-label">мс</div>
+                    </div>
+                </div>
+                <button class="reset-btn" id="resetBtn" onclick="resetTimer()">Сбросить время</button>
+            </div>
+        </div>
+
+        <section class="details-section">
+            <h3>Детали</h3>
+            
+            <div class="detail-item">
+                <div class="detail-icon">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+                </div>
+                <div class="detail-text">
+                    <span class="detail-label">Серия и номер</span>
+                    <span class="detail-value editable" contenteditable="true" spellcheck="false">42 002082</span>
+                </div>
+            </div>
+
+            <div class="detail-item">
+                <div class="detail-icon">
+                    <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><text x="12" y="16" font-size="8" fill="#0f0f0f" text-anchor="middle" font-weight="bold">??</text></svg>
+                </div>
+                <div class="detail-text">
+                    <span class="detail-label">Регистрационный номер</span>
+                    <span class="detail-value editable" contenteditable="true" spellcheck="false">ТР2004</span>
+                </div>
+            </div>
+
+            <div class="detail-item">
+                <div class="detail-icon">
+                    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8v8H8z" fill="none" stroke="#0f0f0f" stroke-width="2"/></svg>
+                </div>
+                <div class="detail-text">
+                    <span class="detail-label">Бортовой номер</span>
+                    <span class="detail-value editable" contenteditable="true" spellcheck="false">Nº2004</span>
+                </div>
+            </div>
+
+            <div class="detail-item">
+                <div class="detail-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 16a6 6 0 1 1 6-6 6 6 0 0 1-6 6z"/></svg>
+                </div>
+                <div class="detail-text">
+                    <span class="detail-label">Перевозчик</span>
+                    <span class="detail-value editable" contenteditable="true" spellcheck="false">Троллейбусное Депо №1</span>
+                </div>
+            </div>
+
+            <div class="detail-item">
+                <div class="detail-icon">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2" stroke="#0f0f0f" stroke-width="2" fill="none"/></svg>
+                </div>
+                <div class="detail-text">
+                    <span class="detail-label">Действует до</span>
+                    <span class="detail-value editable" contenteditable="true" spellcheck="false">13 ноября 2026г. до 19:57</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Начальное время в миллисекундах (59 минут, 59 секунд, 59 мс)
+        // 59 мин = 59 * 60 * 1000 = 3540000 мс
+        // 59 сек = 59 * 1000 = 59000 мс
+        // 59 мс = 59 мс
+        // Итого: 3540000 + 59000 + 59 = 3599059 мс
+        const INITIAL_TIME_MS = 3599059; 
+
+        let timeLeftMs = INITIAL_TIME_MS;
+        let timerInterval = null;
+        let lastTimestamp = 0;
+
+        const minBox = document.getElementById('minBox');
+        const secBox = document.getElementById('secBox');
+        const msBox = document.getElementById('msBox');
+        const expiredText = document.getElementById('expiredText');
+        const ticketTop = document.getElementById('ticketTop');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function updateTimerDisplay() {
+            if (timeLeftMs <= 0) {
+                timeLeftMs = 0;
+                minBox.textContent = '00';
+                secBox.textContent = '00';
+                msBox.textContent = '00';
+                
+                // Меняем текст на "Срок действия истёк"
+                expiredText.textContent = 'Срок действия истёк';
+                expiredText.classList.remove('active');
+                
+                // Меняем цвета на серые (как на оригинальном скриншоте)
+                ticketTop.classList.remove('active');
+                minBox.classList.remove('active');
+                secBox.classList.remove('active');
+                msBox.classList.remove('active');
+                
+                minBox.classList.remove('ending');
+                secBox.classList.remove('ending');
+                msBox.classList.remove('ending');
+
+                resetBtn.style.display = 'block'; // Показываем кнопку сброса
+                return;
+            }
+
+            // Показываем кнопку сброса, если таймер не на начальном значении
+            if (timeLeftMs < INITIAL_TIME_MS) {
+                resetBtn.style.display = 'block';
+            }
+
+            const totalSeconds = Math.floor(timeLeftMs / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const milliseconds = Math.floor((timeLeftMs % 1000) / 10); // Берем первые две цифры миллисекунд для отображения
+
+            minBox.textContent = String(minutes).padStart(2, '0');
+            secBox.textContent = String(seconds).padStart(2, '0');
+            msBox.textContent = String(milliseconds).padStart(2, '0');
+
+            // Меняем цвета на белые, так как билет активен
+            expiredText.textContent = 'Срок действия истекает';
+            expiredText.classList.add('active');
+            ticketTop.classList.add('active');
+            minBox.classList.add('active');
+            secBox.classList.add('active');
+            msBox.classList.add('active');
+
+            // Если осталось меньше 10 секунд, добавляем анимацию
+            if (totalSeconds <= 10) {
+                minBox.classList.add('ending');
+                secBox.classList.add('ending');
+                msBox.classList.add('ending');
+            } else {
+                minBox.classList.remove('ending');
+                secBox.classList.remove('ending');
+                msBox.classList.remove('ending');
+            }
+        }
+
+        function tick() {
+            const now = performance.now();
+            if (lastTimestamp === 0) {
+                lastTimestamp = now;
+            }
+            const delta = now - lastTimestamp;
+            lastTimestamp = now;
+
+            if (timeLeftMs > 0) {
+                timeLeftMs -= delta;
+                if (timeLeftMs < 0) timeLeftMs = 0;
+                updateTimerDisplay();
+            } else {
+                // Останавливаем анимацию, когда время вышло
+                clearInterval(timerInterval);
+                timerInterval = null;
+                updateTimerDisplay();
+            }
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            lastTimestamp = 0;
+            timerInterval = setInterval(tick, 16); // ~60 FPS для плавности миллисекунд
+        }
+
+        function resetTimer() {
+            timeLeftMs = INITIAL_TIME_MS;
+            updateTimerDisplay();
+            startTimer();
+        }
+
+        // Инициализация при загрузке
+        updateTimerDisplay();
+        startTimer();
+
+        // Сохранение изменений в localStorage (чтобы текст не сбрасывался при обновлении)
+        const editables = document.querySelectorAll('.editable');
+        editables.forEach((el, index) => {
+            // Загружаем сохраненный текст
+            const savedText = localStorage.getItem('livejop_edit_' + index);
+            if (savedText) {
+                el.textContent = savedText;
+            }
+
+            // Сохраняем при изменении
+            el.addEventListener('blur', () => {
+                localStorage.setItem('livejop_edit_' + index, el.textContent);
+            });
+            
+            // Отключаем вставку форматированного текста
+            el.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+                document.execCommand('insertText', false, text);
+            });
+        });
+    </script>
+</body>
+</html>
